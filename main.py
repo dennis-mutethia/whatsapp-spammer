@@ -29,7 +29,7 @@ if __name__ == "__main__":
         func=sender.queue_messages,  # Directly pass the method reference
         trigger=CronTrigger(
             hour="*",       
-            minute="*/10", #every 10 minutes
+            minute="*/1", #every 1 minute
             second="0"
         ),
         id="queue_messages",
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         func=sender.send_pending_messages,  # Directly pass the method reference
         trigger=CronTrigger(
             hour="*",           
-            minute="*/5",  #every 5 minutes 
+            minute="*/1",  #every 1 minute 
             second="0"
         ),
         id="send_pending_messages",

@@ -1,6 +1,6 @@
 
 import logging
-from dotenv import load_dotenv
+import os
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -10,13 +10,13 @@ from utils.sms_gate_client import SMSGateClient
 
 logger = logging.getLogger(__name__)
 
+SPAMMER_INTERVAL_HOURS = int(os.getenv("SPAMMER_INTERVAL_HOURS", "7")) 
 
 class Sender():
     """
         main class
     """
     def __init__(self):   
-        load_dotenv()     
         self.db = Db()
         self.sms_gate_client = SMSGateClient()
     
@@ -26,7 +26,7 @@ class Sender():
                 -- Contacts that already got a message in the last 13 hours
                 SELECT contact_id
                 FROM messages
-                WHERE created_at >= NOW() - INTERVAL '13 hours'
+                WHERE created_at >= NOW() - INTERVAL ':interval_hours hours'
                 GROUP BY contact_id
             ),
             used_templates AS (
@@ -55,7 +55,7 @@ class Sender():
         
         try:
             with self.db.engine.begin() as conn:  # Auto-commit + rollback on error
-                inserted = conn.execute(query)
+                inserted = conn.execute(query, {"interval_hours": SPAMMER_INTERVAL_HOURS})
                 logger.info("Queued %d new messages", inserted.rowcount)
         except SQLAlchemyError as e:
             logger.error("Error queuing messages: %s", e)

@@ -4,6 +4,8 @@ from pydoll.browser.chromium import Chrome
 from pydoll.browser.options import ChromiumOptions
 from pydoll.constants import PageLoadState   # <-- Add this import
 
+from utils.db import Db
+
 BASE_URL = "https://www.truepeoplesearch.com"
 CAPTCHA_PATH = "/InternalCaptcha"
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -161,7 +163,7 @@ async def go_to_next_page(tab) -> bool:
         return False
 
 
-async def main():        
+async def scrape():        
     await scrape_people("John", age_range="57-80")
     
     if results:
@@ -178,4 +180,3 @@ async def main():
         except SQLAlchemyError as e:
             logger.error("Error inserting contacts: %s", e)
 
-asyncio.run(main())

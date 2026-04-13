@@ -318,32 +318,27 @@ def rewrite_html(content: str, base_url: str) -> str:
         absolute = urljoin(base_url, href)
         return f"/proxy?url={quote(absolute, safe='')}"
 
-    # Rewrite href attributes
-    def replace_href(m):
-        href = m.group(1) or m.group(2)
-        quote_char = '"' if m.group(1) is not None else "'"
-        return f'href={quote_char}{make_proxy_url(href)}{quote_char}'
-
-    content = re.sub(r'href="([^"]*)"', replace_href, content)
-    content = re.sub(r"href='([^']*)'", replace_href, content)
+    # Rewrite href attributes — separate replacers per quote style (each pattern has only 1 group)
+    content = re.sub(r'href="([^"]*)"',
+                     lambda m: f'href="{make_proxy_url(m.group(1))}"', content)
+    content = re.sub(r"href='([^']*)'",
+                     lambda m: f"href='{make_proxy_url(m.group(1))}'", content)
 
     # Rewrite action attributes (forms)
-    def replace_action(m):
-        action = m.group(1) or m.group(2)
-        quote_char = '"' if m.group(1) is not None else "'"
-        return f'action={quote_char}{make_proxy_url(action)}{quote_char}'
+    content = re.sub(r'action="([^"]*)"',
+                     lambda m: f'action="{make_proxy_url(m.group(1))}"', content)
+    content = re.sub(r"action='([^']*)'",
+                     lambda m: f"action='{make_proxy_url(m.group(1))}'", content)
 
-    content = re.sub(r'action="([^"]*)"', replace_action, content)
-    content = re.sub(r"action='([^']*)'", replace_action, content)
-
-    # Rewrite src for iframes (images/scripts are left as absolute to avoid breaking them)
+    # Rewrite src for iframes
     def replace_iframe_src(m):
-        src = m.group(1) or m.group(2)
-        quote_char = '"' if m.group(1) is not None else "'"
-        absolute = urljoin(base_url, src)
-        return f'src={quote_char}/proxy?url={quote(absolute, safe="")}{quote_char}'
+        absolute = urljoin(base_url, m.group(1))
+        return f'src="/proxy?url={quote(absolute, safe="")}"'
 
-    content = re.sub(r'<iframe[^>]+src="([^"]*)"', replace_iframe_src, content)
+    content = re.sub(r'(?<=<iframe\s)(?:[^>]*?\s)?src="([^"]*)"', replace_iframe_src, content)
+    content = re.sub(r'<iframe([^>]+)src="([^"]*)"',
+                     lambda m: f'<iframe{m.group(1)}src="/proxy?url={quote(urljoin(base_url, m.group(2)), safe="")}"',
+                     content)
 
     # Make relative src absolute for scripts/images so they load correctly
     def make_src_absolute(m):

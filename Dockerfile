@@ -1,13 +1,13 @@
-#Use small python alpine base
+# Use small python alpine base
 FROM python:3.13-alpine
 
-#install dependencies
+# Install dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-#copy rest of the code
+# Copy rest of the code
 COPY . .
 
-#Run application
+# Run application
 ENTRYPOINT ["python", "main.py"]

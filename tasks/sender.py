@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from utils.db import Db
 from utils.sms_gate_client import SMSGateClient
+from utils.waha_client import WAHA_CLIENT
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class Sender():
     def __init__(self):   
         self.db = Db()
         self.sms_gate_client = SMSGateClient()
+        self.waha_client = WAHA_CLIENT()
     
     def queue_messages(self):
         query = text("""
@@ -61,7 +63,34 @@ class Sender():
             logger.error("Error queuing messages: %s", e)
 
 
-    def send_pending_messages(self):
+    def send_sms_message(self, msg, conn):   
+        try: 
+            sms_response = self.sms_gate_client.send_sms(f"+{msg.phone}", msg.content)
+            logger.info("SMS Gate response: %s", sms_response)
+            update_query = text("UPDATE messages SET status = 'sent' WHERE id = :id")
+            conn.execute(update_query, {"id": msg.id})
+                    
+        except Exception as e:
+            logger.error("Error sending SMS message ID %d: %s", msg.id, e)
+    
+    def send_waha_message(self, msg, conn):   
+        try: 
+            response = self.waha_client.send_text(msg.phone, msg.content)
+            message_id = response.get("id").get("_serialized") if response else None
+            if message_id:
+                response = self.waha_client.get_message_status(msg.phone, message_id)
+                status = response.get("ackName") if response else None
+                logger.info("Message ID %d sent with status: %s", msg.id, status)
+                
+                if status:                        
+                    update_query = text("UPDATE messages SET status = :status WHERE id = :id")
+                    conn.execute(update_query, {"id": msg.id, "status": status})
+            else:
+                logger.error("Failed to send message ID %d", msg.id)
+        except Exception as e:
+            logger.error("Error sending waha message ID %d: %s", msg.id, e)
+
+    def send_pending_messages(self, limit=1):
         query = text("""
             SELECT m.id, c.phone, t.content
             FROM messages m
@@ -69,19 +98,17 @@ class Sender():
             JOIN templates t ON t.id = m.template_id
             WHERE m.status = 'pending'
             ORDER BY m.created_at
+            LIMIT :limit
         """)
         
         try:
             with self.db.engine.begin() as conn:  # Auto-commit + rollback on error
-                result = conn.execute(query)
+                result = conn.execute(query, {"limit": limit})
                 messages = result.fetchall()
                 logger.info("Fetched %d pending messages", len(messages))
                 
                 for msg in messages:
-                    sms_response = self.sms_gate_client.send_sms(f"+{msg.phone}", msg.content)
-                    logger.info("SMS Gate response: %s", sms_response)
-                    update_query = text("UPDATE messages SET status = 'sent' WHERE id = :id")
-                    conn.execute(update_query, {"id": msg.id})
+                    self.send_waha_message(msg, conn)
                     
         except SQLAlchemyError as e:
             logger.error("Error fetching pending messages: %s", e)

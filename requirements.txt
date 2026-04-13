@@ -1,5 +1,7 @@
+asyncio
 apscheduler
 psycopg2-binary
+pydoll-python
 python-dotenv
 pytz
 requests

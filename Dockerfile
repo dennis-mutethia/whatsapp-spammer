@@ -10,4 +10,4 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 # Run application
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["python", "tasks.py"]

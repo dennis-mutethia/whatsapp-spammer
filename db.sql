@@ -2,9 +2,13 @@
 DROP TABLE IF EXISTS contacts;
 CREATE TABLE contacts (
   id SERIAL PRIMARY KEY,
-  phone TEXT NOT NULL,
   name TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  phone TEXT NOT NULL,
+  age INTEGER,
+  city TEXT,
+  state TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (phone)
 );
 
 

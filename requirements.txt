@@ -1,5 +1,7 @@
 asyncio
 apscheduler
+chardet
+flask
 psycopg2-binary
 pydoll-python
 python-dotenv
